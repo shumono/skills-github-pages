@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>目閉じ検出デモ</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            overflow: hidden; /* スプラッシュ表示のため */
+        }
+        #video-container {
+            position: relative;
+            width: 640px;
+            height: 480px;
+            border: 2px solid #333;
+            background-color: #000;
+            margin-bottom: 20px;
+        }
+        #video-feed {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* カメラ映像を反転 (鏡のように) */
+        }
+        #overlay-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform: scaleX(-1); /* オーバーレイも反転 */
+        }
+        #message {
+            margin-top: 10px;
+            font-size: 1.2em;
+            color: #555;
+            min-height: 1.5em; /* メッセージ表示領域を確保 */
+        }
+        #splash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 0, 0, 0.7); /* 赤い半透明 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 5em;
+            font-weight: bold;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+            z-index: 1000;
+        }
+        #splash.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            margin: 10px; /* ボタン間のスペース */
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <h1>目閉じ検出デモ</h1>
+
+    <div id="video-container">
+        <video id="video-feed" autoplay playsinline></video>
+        <canvas id="overlay-canvas"></canvas>
+    </div>
+
+    <p id="message">「カメラを起動」ボタンを押してください。</p>
+    <div>
+        <button id="startButton">カメラを起動</button>
+        <button id="resetButton" disabled>リセット</button>
+        <button id="stopButton" disabled>カメラを停止</button>
+    </div>
+
+
+    <div id="splash">作動！</div>
+
+    <script>
+        const video = document.getElementById('video-feed');
+        const canvas = document.getElementById('overlay-canvas');
+        const context = canvas.getContext('2d');
+        const message = document.getElementById('message');
+        const splash = document.getElementById('splash');
+        const startButton = document.getElementById('startButton');
+        const resetButton = document.getElementById('resetButton');
+        const stopButton = document.getElementById('stopButton');
+
+        let isEyeClosed = false;
+        let closedStartTime = null;
+        let detectionActive = false; // 検出がアクティブかどうかのフラグ
+        let currentStream; // カメラのストリームを保持
+        let audioContext;
+        let oscillator;
+
+        // 音を鳴らす関数
+        function playBeep() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (oscillator) {
+                oscillator.stop(); // 既存の音があれば停止
+            }
+            oscillator = audioContext.createOscillator();
+            oscillator.type = 'sine'; // 正弦波
+            oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // 440 Hz
+            oscillator.connect(audioContext.destination);
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.5); // 0.5秒後に停止
+        }
+
+        // カメラ映像の取得と表示
+        async function setupCamera() {
+            try {
+                message.textContent = 'カメラを起動中...';
+                currentStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = currentStream;
+                video.onloadedmetadata = () => {
+                    video.play();
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    message.textContent = '検出待機中...';
+                    detectionActive = true;
+                    requestAnimationFrame(detectEyes); // 検出開始
+                    startButton.disabled = true;
+                    resetButton.disabled = false;
+                    stopButton.disabled = false;
+                };
+            } catch (err) {
+                console.error('カメラアクセスエラー:', err);
+                message.textContent = 'カメラへのアクセスを許可してください。';
+                startButton.disabled = false;
+                resetButton.disabled = true;
+                stopButton.disabled = true;
+            }
+        }
+
+        // 簡易的な目閉じ検出ロジック (非常に原始的です！)
+        function detectEyes() {
+            if (!detectionActive || video.paused || video.ended) {
+                return; // 検出が非アクティブ、またはビデオが停止している場合は終了
+            }
+
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            const eyeRegionX = Math.floor(canvas.width * 0.3);
+            const eyeRegionY = Math.floor(canvas.height * 0.4);
+            const eyeRegionWidth = Math.floor(canvas.width * 0.4);
+            const eyeRegionHeight = Math.floor(canvas.height * 0.2);
+
+            let totalBrightness = 0;
+            let pixelCount = 0;
+
+            for (let y = eyeRegionY; y < eyeRegionY + eyeRegionHeight; y++) {
+                for (let x = eyeRegionX; x < eyeRegionX + eyeRegionWidth; x++) {
+                    const index = (y * canvas.width + x) * 4;
+                    const r = data[index];
+                    const g = data[index + 1];
+                    const b = data[index + 2];
+                    totalBrightness += (0.299 * r + 0.587 * g + 0.114 * b);
+                    pixelCount++;
+                }
+            }
+
+            const averageBrightness = totalBrightness / pixelCount;
+            const brightnessThreshold = 70; // この値を調整して感度を変更
+
+            const currentlyClosed = averageBrightness < brightnessThreshold;
+
+            if (currentlyClosed && !isEyeClosed) {
+                isEyeClosed = true;
+                closedStartTime = Date.now();
+                message.textContent = '目を閉じました。3秒数えています...';
+            } else if (!currentlyClosed && isEyeClosed) {
+                isEyeClosed = false;
+                closedStartTime = null;
+                message.textContent = '目を開きました。';
+            } else if (currentlyClosed && isEyeClosed) {
+                const closedDuration = Date.now() - closedStartTime;
+                if (closedDuration >= 3000) {
+                    if (detectionActive) {
+                        message.textContent = '3秒間目を閉じました！作動！';
+                        splash.classList.add('active');
+                        playBeep();
+                        detectionActive = false; // 検出を停止
+                        // startButton.disabled = false; // 再度開始できるように
+                        // stopButton.disabled = true;
+                    }
+                } else {
+                    message.textContent = `目を閉じました。あと ${(3 - (closedDuration / 1000)).toFixed(1)}秒...`;
+                }
+            }
+
+            requestAnimationFrame(detectEyes); // 次のフレームで再検出
+        }
+
+        // イベントリスナー
+        startButton.addEventListener('click', setupCamera);
+
+        resetButton.addEventListener('click', () => {
+            splash.classList.remove('active');
+            isEyeClosed = false;
+            closedStartTime = null;
+            message.textContent = '検出待機中...';
+            detectionActive = true; // 検出を再開
+            // requestAnimationFrame(detectEyes); // 検出ループを再開 (既に動いている可能性があるので不要)
+            // startButton.disabled = true; // カメラが起動しているので無効
+            // stopButton.disabled = false; // カメラが起動しているので有効
+        });
+
+        stopButton.addEventListener('click', () => {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop()); // 全てのトラックを停止
+                video.srcObject = null;
+                message.textContent = 'カメラが停止しました。「カメラを起動」ボタンを押してください。';
+                detectionActive = false; // 検出を停止
+                startButton.disabled = false;
+                resetButton.disabled = true;
+                stopButton.disabled = true;
+                splash.classList.remove('active'); // スプラッシュも消す
+                isEyeClosed = false;
+                closedStartTime = null;
+            }
+        });
+
+        // 初期状態のボタン制御
+        startButton.disabled = false;
+        resetButton.disabled = true;
+        stopButton.disabled = true;
+    </script>
+</body>
+</html>
