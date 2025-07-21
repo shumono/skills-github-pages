@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>感触を表現する円形インターフェース</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: "Inter", sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #FBF9F6; /* 温かみのあるオフホワイトの背景色 */
+            overflow: hidden; /* 震えでスクロールバーが出ないように */
+            transition: background-color 0.05s ease-out; /* フラッシュ時の背景色変化を滑らかに */
+        }
+        canvas {
+            border: 2px solid rgba(0, 0, 0, 0.1); /* キャンバスの境界線をより控えめに */
+            background-color: #4b894f; /* Canvasの背景色を濃い緑に変更 */
+            border-radius: 8px; /* 角を丸くする */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05); /* 影をより柔らかく */
+            /* デフォルトのマウスカーソルを表示する */
+            cursor: default; /* マウスカーソルをデフォルトに戻す */
+            transform: translate(0, 0); /* 常に初期位置にリセットされるように */
+        }
+
+        /* マウスオーバー時の控えめな弾力のある震え (Canvas全体を揺らす) */
+        @keyframes weak-elastic-shake {
+            0% { transform: translate(0px, 0px); }
+            10% { transform: translate(-1.5px, -1.5px); } /* 振幅を調整 */
+            20% { transform: translate(1.5px, 1.5px); }
+            30% { transform: translate(-1.5px, 1.5px); }
+            40% { transform: translate(1.5px, -1.5px); }
+            50% { transform: translate(-1.5px, -1.5px); }
+            60% { transform: translate(1.5px, 1.5px); }
+            70% { transform: translate(-1.5px, 1.5px); }
+            80% { transform: translate(1.5px, -1.5px); }
+            90% { transform: translate(-0.75px, -0.75px); } /* 振幅をさらに弱める */
+            100% { transform: translate(0px, 0px); }
+        }
+        .shaking-weak-elastic {
+            animation: weak-elastic-shake 0.3s cubic-bezier(0.68, -0.6, 0.32, 1.6) forwards; /* 0.3秒で1回再生して停止 */
+            will-change: transform; /* パフォーマンス最適化 */
+        }
+
+        /* 小さな円クリック時の激しい震え (Canvas要素全体を揺らす) */
+        @keyframes violent-shake {
+            0% { transform: translate(0px, 0px) scale(1); }
+            10% { transform: translate(-15px, -15px) scale(1.02); } /* 振幅を大きく */
+            20% { transform: translate(15px, 15px) scale(1.04); }
+            30% { transform: translate(-15px, 15px) scale(1.02); }
+            40% { transform: translate(15px, -15px) scale(1.04); }
+            50% { transform: translate(-15px, -15px) scale(1.02); }
+            60% { transform: translate(15px, 15px) scale(1.04); }
+            70% { transform: translate(-15px, 15px) scale(1.02); }
+            80% { transform: translate(15px, -15px) scale(1.04); }
+            90% { transform: translate(-7.5px, -7.5px) scale(1.01); } /* 振幅を大きく */
+            100% { transform: translate(0px, 0px) scale(1); }
+        }
+        .shaking-violent {
+            animation: violent-shake 0.3s cubic-bezier(.36,.07,.19,.97) forwards; /* 0.3秒で1回再生して停止 */
+            will-change: transform; /* パフォーマンス最適化 */
+        }
+
+        /* 赤いフラッシュのCSS */
+        .flash-red {
+            background-color: #FF0000 !important; /* 強制的に赤色にする */
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+
+    <canvas id="myCanvas" width="800" height="600"></canvas>
+
+    <script>
+        // キャンバス要素と描画コンテキストを取得
+        const canvas = document.getElementById('myCanvas');
+        const ctx = canvas.getContext('2d');
+        const body = document.body; // body要素を取得
+
+        // キャンバスの幅と高さ
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+
+        // キャンバスの中心座標を計算
+        const centerX = canvasWidth / 2;
+        const centerY = canvasHeight / 2;
+
+        // 円の半径
+        const largeRadius = 250;
+        const smallRadius = 50;
+
+        // アニメーションフレームID
+        let animationFrameId = null;
+        // 前回のタイムスタンプ（requestAnimationFrame用）
+        let lastTimestamp = 0;
+
+        // 震えに関する状態変数
+        let isCssWeakElasticShaking = false; // CSSアニメーションによる震えがアクティブかどうか (マウスオーバー用)
+        let cssWeakElasticShakeTimeoutId = null; // CSSアニメーションのsetTimeout ID
+
+        let isJsStartledShaking = false; // JavaScriptによる震えがアクティブかどうか (クリック用)
+        let jsStartledShakeStartTime = 0;
+        const jsStartledShakeMagnitude = 8; // JS震えの最大振幅（ピクセル）
+        const jsStartledShakeFrequency = 20; // JS震えの速さ（小さいほど速い）
+        const jsStartledShakeDuration = 600; // JS震えの持続時間 (0.6秒)
+
+        // 小さな円クリック時の新しい状態変数
+        let isViolentShaking = false; // 激しい震えがアクティブかどうか (CSS制御)
+        let violentShakeTimeoutId = null; // 激しい震えのsetTimeout ID
+        let isFlashingRed = false; // 赤いフラッシュがアクティブかどうか
+
+        // マウスが小さな円に入ったことを追跡するフラグ
+        let hasEnteredSmallCircle = false;
+
+
+        /**
+         * 点が円の内側にあるかどうかをチェックする関数。
+         */
+        function isInsideCircle(px, py, cx, cy, radius) {
+            const distance = Math.sqrt(Math.pow(px - cx, 2) + Math.pow(py - cy, 2));
+            return distance <= radius;
+        }
+
+        /**
+         * 両方の円を描画する関数。
+         * @param {number} largeCircleOffsetX - 大きい円のX軸オフセット。
+         * @param {number} largeCircleOffsetY - 大きい円のY軸オフセット。
+         */
+        function drawCircles(largeCircleOffsetX = 0, largeCircleOffsetY = 0) {
+            // キャンバス全体をクリア
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+            // 大きい円を描画 (オフセットを適用)
+            ctx.beginPath();
+            ctx.arc(centerX + largeCircleOffsetX, centerY + largeCircleOffsetY, largeRadius, 0, Math.PI * 2, false);
+            ctx.fillStyle = '#C1FFD7'; // 塗りつぶしの色（薄い緑）
+            ctx.fill();
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = '#2ECC71'; // 線の色（緑）
+            ctx.stroke();
+            ctx.closePath();
+
+            // 小さい円を描画 (オフセットなし)
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, smallRadius, 0, Math.PI * 2, false); // 小さい円は常に中央
+            ctx.fillStyle = '#FFDDC1'; // 塗りつぶしの色（薄いオレンジ）
+            ctx.fill();
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = '#FF6B6B'; // 線の色（赤）
+            ctx.stroke();
+            ctx.closePath();
+        }
+
+        /**
+         * すべての震えアニメーションを停止し、状態をリセットするヘルパー関数。
+         */
+        function stopAllShakes() {
+            if (isCssWeakElasticShaking) {
+                canvas.classList.remove('shaking-weak-elastic');
+                clearTimeout(cssWeakElasticShakeTimeoutId);
+                isCssWeakElasticShaking = false;
+            }
+            if (isJsStartledShaking) {
+                isJsStartledShaking = false; // JS制御の震えを停止
+            }
+            if (isViolentShaking) {
+                canvas.classList.remove('shaking-violent');
+                clearTimeout(violentShakeTimeoutId);
+                isViolentShaking = false;
+            }
+            if (isFlashingRed) {
+                body.classList.remove('flash-red');
+                isFlashingRed = false;
+            }
+            // アニメーションループが実行中であれば停止
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+            drawCircles(); // 震えが止まった状態で再描画し、元の位置に戻す
+        }
+
+
+        /**
+         * 震えアニメーションをトリガーする関数。
+         * @param {string} type - 'weakElastic' (CSS制御) または 'startledClick' (JS制御)
+         * @param {boolean} isSmallCircleClick - 小さな円のクリックによるものか (赤いフラッシュと激震用)
+         */
+        function triggerShake(type, isSmallCircleClick = false) {
+            // 他の震えを停止
+            stopAllShakes();
+
+            if (isSmallCircleClick) {
+                // 赤いフラッシュと激しい震え
+                isFlashingRed = true;
+                body.classList.add('flash-red');
+
+                isViolentShaking = true;
+                canvas.classList.add('shaking-violent');
+
+                violentShakeTimeoutId = setTimeout(() => {
+                    body.classList.remove('flash-red');
+                    isFlashingRed = false;
+                    canvas.classList.remove('shaking-violent');
+                    isViolentShaking = false;
+                    drawCircles(); // 震え終了後に円を再描画して、確実に元の位置に戻す
+                    // 他のアニメーションがアクティブでなければrequestAnimationFrameを停止
+                    if (!isJsStartledShaking && !isCssWeakElasticShaking && animationFrameId) {
+                        cancelAnimationFrame(animationFrameId);
+                        animationFrameId = null;
+                    }
+                }, 300); // 0.3秒
+            } else if (type === 'weakElastic') { // マウスオーバー時 (CSS制御)
+                isCssWeakElasticShaking = true;
+                canvas.classList.add('shaking-weak-elastic');
+                cssWeakElasticShakeTimeoutId = setTimeout(() => {
+                    canvas.classList.remove('shaking-weak-elastic');
+                    isCssWeakElasticShaking = false;
+                    drawCircles(); // 震え終了後に円を再描画して、確実に元の位置に戻す
+                    // 他のアニメーションがアクティブでなければrequestAnimationFrameを停止
+                    if (!isJsStartledShaking && !isViolentShaking && animationFrameId) {
+                        cancelAnimationFrame(animationFrameId);
+                        animationFrameId = null;
+                    }
+                }, 300); // 0.3秒
+            } else if (type === 'startledClick') { // 大きな円クリック時 (JS制御)
+                isJsStartledShaking = true;
+                jsStartledShakeStartTime = performance.now();
+                // JS制御の震えはanimateループで描画と停止を管理
+            }
+            // アニメーションループがまだ開始されていない場合のみ開始
+            if (!animationFrameId) {
+                animationFrameId = requestAnimationFrame(animate);
+            }
+        }
+
+        /**
+         * アニメーションループ関数。
+         * @param {DOMHighResTimeStamp} timestamp - 現在のタイムスタンプ。
+         */
+        function animate(timestamp) {
+            if (!lastTimestamp) {
+                lastTimestamp = timestamp;
+            }
+            const deltaTime = timestamp - lastTimestamp; // 前回のフレームからの経過時間（ミリ秒）
+            lastTimestamp = timestamp;
+
+            let largeCircleOffsetX = 0;
+            let largeCircleOffsetY = 0;
+
+            // 大きな円クリック時の「びっくりした反応」の震えの計算 (JS制御)
+            if (isJsStartledShaking) {
+                const elapsedTime = timestamp - jsStartledShakeStartTime;
+                if (elapsedTime < jsStartledShakeDuration) {
+                    // 弾力のある動きを表現するためのサイン波と減衰
+                    const progress = elapsedTime / jsStartledShakeDuration;
+                    const magnitude = jsStartledShakeMagnitude * Math.exp(-progress * 5); // 減衰
+                    largeCircleOffsetX = Math.sin(elapsedTime / jsStartledShakeFrequency) * magnitude;
+                    largeCircleOffsetY = Math.cos(elapsedTime / jsStartledShakeFrequency) * magnitude;
+                } else {
+                    isJsStartledShaking = false; // 震えを停止
+                    // 他のアニメーションがアクティブでなければrequestAnimationFrameを停止
+                    if (!isCssWeakElasticShaking && !isViolentShaking && animationFrameId) {
+                        cancelAnimationFrame(animationFrameId);
+                        animationFrameId = null;
+                    }
+                }
+            }
+
+            // 円を描画 (大きい円にのみオフセットを適用)
+            drawCircles(largeCircleOffsetX, largeCircleOffsetY);
+
+            // どちらかの震えがアクティブであれば次のフレームをリクエスト
+            if (isCssWeakElasticShaking || isJsStartledShaking || isViolentShaking) {
+                animationFrameId = requestAnimationFrame(animate);
+            } else if (animationFrameId) { // 全てのアニメーションが停止したらループを終了
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+                drawCircles(); // 最終状態を確定
+            }
+        }
+
+        // キャンバスに対するマウス移動イベントリスナー
+        canvas.addEventListener('mousemove', function(event) {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+
+            // マウスが小さな円の内側にあるかチェック
+            const mouseInSmallCircle = isInsideCircle(mouseX, mouseY, centerX, centerY, smallRadius);
+
+            if (mouseInSmallCircle) {
+                // マウスが小さな円に入ったばかりの場合
+                if (!hasEnteredSmallCircle) {
+                    triggerShake('weakElastic'); // 控えめな弾力を感じる震えをトリガー (CSS制御)
+                    hasEnteredSmallCircle = true; // 小さな円に入ったことを記録
+                }
+            } else {
+                // マウスが小さな円の外に出た場合、hasEnteredSmallCircleフラグをリセット
+                hasEnteredSmallCircle = false;
+            }
+        });
+
+        // キャンバスに対する左クリックイベントリスナー
+        canvas.addEventListener('click', function(event) {
+            const rect = canvas.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            const clickY = event.clientY - rect.top;
+
+            // 小さな円の内側であるかチェック
+            const inSmallCircle = isInsideCircle(clickX, clickY, centerX, centerY, smallRadius);
+            // 大きな円の内側で、かつ小さな円の外側であるかチェック
+            const inLargeCircleOnly = isInsideCircle(clickX, clickY, centerX, centerY, largeRadius) && !inSmallCircle;
+
+            if (inSmallCircle) {
+                // 小さな円の上で左クリックされた場合
+                triggerShake('violent', true); // 赤いフラッシュと激しい震えをトリガー
+            } else if (inLargeCircleOnly) {
+                // 大きな円の中（小さな円の外）で左クリックされた場合
+                triggerShake('startledClick'); // ゆっくり弾力のある震えをトリガー (JS制御)
+            }
+        });
+
+        // キャンバスからマウスが離れたときのイベントリスナー
+        canvas.addEventListener('mouseleave', function() {
+            // すべての震えとフラッシュを停止
+            stopAllShakes();
+            // デフォルトカーソルに戻す
+            canvas.style.cursor = 'default';
+            // キャンバスをクリアしてカスタムカーソルを消去
+            drawCircles();
+            hasEnteredSmallCircle = false; // 小さな円への進入フラグもリセット
+        });
+
+        // キャンバスにマウスが入ったときのイベントリスナー
+        canvas.addEventListener('mouseenter', function() {
+            // マウスがキャンバスに入ったらカーソルをデフォルトに戻す
+            canvas.style.cursor = 'default';
+        });
+
+        // ウィンドウがロードされたときに初期描画とアニメーションを開始
+        window.onload = function() {
+            drawCircles(); // 初回描画
+            // アニメーションループを開始
+            animate(performance.now());
+        };
+    </script>
+</body>
+</html>
