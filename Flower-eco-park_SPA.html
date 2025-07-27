@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>フラワー・エコパーク構想</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Earthy Harmony -->
+    <!-- Application Structure Plan: A single-page application with a fixed navigation bar for easy access to thematic sections (The Challenge, The Vision, The 3 Cycles, The Partnership, The Impact). This non-linear structure allows users to explore the concept based on their interests, rather than following a rigid presentation flow. The core of the application is the interactive "3 Cycles" section, which uses a tab-based interface to detail the 'How' of the project, making the complex plan digestible and engaging. This design prioritizes user-driven exploration and understanding over passive information consumption. -->
+    <!-- Visualization & Content Choices: 
+        - The Challenge: Goal: To convey urgency. Method: Two bar charts (Chart.js) showing flower waste and farmer aging. Interaction: Tooltips on hover. Justification: Quantifiable data makes the problem tangible.
+        - The 3 Cycles: Goal: To explain the core solution. Method: An interactive tab system (HTML/CSS/JS) with icons (Unicode) and diagrams (HTML/CSS). Interaction: Clicking tabs reveals detailed content. Justification: Breaks down a complex strategy into manageable, explorable parts.
+        - The Partnership: Goal: To show the implementation structure. Method: A triangular diagram built with HTML/Tailwind CSS. Interaction: None. Justification: A simple visual metaphor for a three-part collaboration.
+        - The Impact: Goal: To demonstrate the expected positive outcomes. Method: Two "Before/After" bar charts (Chart.js). Interaction: Tooltips on hover. Justification: Visually contrasts the current situation with the future potential, making the benefits clear.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: #fdfcfb;
+            color: #374151;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 350px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .nav-link {
+            transition: color 0.3s, border-bottom-color 0.3s;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-link.active, .nav-link:hover {
+            color: #10B981;
+            border-bottom-color: #10B981;
+        }
+        .tab-button {
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .tab-button.active {
+            background-color: #10B981;
+            color: white;
+        }
+        .section-fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        .section-fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="bg-stone-50">
+
+    <header id="header" class="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50">
+        <nav class="container mx-auto px-6 py-3 flex justify-between items-center">
+            <a href="#hero" class="text-xl font-bold text-emerald-700">フラワー・エコパーク構想</a>
+            <div class="hidden md:flex space-x-8">
+                <a href="#challenge" class="nav-link">課題</a>
+                <a href="#vision" class="nav-link">構想</a>
+                <a href="#cycles" class="nav-link">3つの循環</a>
+                <a href="#partnership" class="nav-link">連携体制</a>
+                <a href="#impact" class="nav-link">インパクト</a>
+            </div>
+            <div class="md:hidden">
+                <button id="mobile-menu-button" class="text-gray-600 focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                </button>
+            </div>
+        </nav>
+        <div id="mobile-menu" class="hidden md:hidden px-6 pt-2 pb-4">
+            <a href="#challenge" class="block py-2 text-gray-700">課題</a>
+            <a href="#vision" class="block py-2 text-gray-700">構想</a>
+            <a href="#cycles" class="block py-2 text-gray-700">3つの循環</a>
+            <a href="#partnership" class="block py-2 text-gray-700">連携体制</a>
+            <a href="#impact" class="block py-2 text-gray-700">インパクト</a>
+        </div>
+    </header>
+
+    <main>
+        <section id="hero" class="min-h-screen flex items-center bg-emerald-50">
+            <div class="container mx-auto px-6 text-center">
+                <h1 class="text-4xl md:text-6xl font-bold text-emerald-800 mb-4">未来を彩る「新しい循環」へ</h1>
+                <p class="text-lg md:text-xl text-emerald-700 max-w-3xl mx-auto">学びと共創が咲き誇る、新しい循環の拠点。廃校から、日本の未来を育む希望のパークが生まれます。</p>
+            </div>
+        </section>
+
+        <section id="challenge" class="py-20 bg-white section-fade-in">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold text-gray-800">なぜ今、この構想が必要なのか？</h2>
+                    <p class="mt-4 text-gray-600 max-w-2xl mx-auto">日本は人口減少、地方の過疎化、そして遊休地の増加という課題に直面しています。同時に、私たちの生活を彩る花産業もまた、廃棄ロスや担い手不足という深刻な問題を抱えています。</p>
+                </div>
+                <div class="grid md:grid-cols-2 gap-12 items-center">
+                    <div class="text-center">
+                        <h3 class="text-xl font-bold mb-4">社会が抱える課題</h3>
+                        <div class="flex justify-center space-x-6 text-center">
+                            <div class="p-4 rounded-lg">
+                                <div class="text-4xl mb-2">📉</div>
+                                <p class="font-semibold">人口減少<br>少子高齢化</p>
+                            </div>
+                            <div class="p-4 rounded-lg">
+                                <div class="text-4xl mb-2">🏚️</div>
+                                <p class="font-semibold">地方の過疎化<br>遊休地の増加</p>
+                            </div>
+                            <div class="p-4 rounded-lg">
+                                <div class="text-4xl mb-2">🔗</div>
+                                <p class="font-semibold">地域活力の<br>低下</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-center mb-4">花産業の「閉じている」現状</h3>
+                        <div class="chart-container">
+                            <canvas id="flowerWasteChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="vision" class="py-20 bg-emerald-50 section-fade-in">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold text-emerald-800">どんな未来を創るのか？</h2>
+                    <p class="mt-4 text-emerald-700 max-w-2xl mx-auto">今、地域に眠る廃校を、これからは、学びと共創が咲き誇る「フラワー・エコパーク」に。美しさだけでなく、持続可能な社会への貢献を体験し、共創できる場を創ります。</p>
+                </div>
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    <div class="border-2 border-dashed border-gray-300 p-8 rounded-lg text-center">
+                        <h3 class="text-2xl font-bold text-gray-500 mb-4">Before</h3>
+                        <div class="text-6xl mb-4">🏫</div>
+                        <p class="text-gray-600">静かに時を待つ廃校。<br>地域の活力が失われつつある現状。</p>
+                    </div>
+                    <div class="bg-white shadow-lg p-8 rounded-lg text-center">
+                        <h3 class="text-2xl font-bold text-emerald-600 mb-4">After</h3>
+                        <div class="text-6xl mb-4">🌸</div>
+                        <p class="text-emerald-800">花と緑、そして人々の笑顔が溢れる<br>新しい循環のハブ。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="cycles" class="py-20 bg-white section-fade-in">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold text-gray-800">どう実現するのか？ ３つの「新しい循環」</h2>
+                    <p class="mt-4 text-gray-600 max-w-2xl mx-auto">「遊休地」「経験知」「共創価値」という３つの軸を循環させることで、持続可能なパークモデルをデザインします。下のタブをクリックして、具体的なアイデアをご覧ください。</p>
+                </div>
+                <div class="max-w-4xl mx-auto">
+                    <div class="flex justify-center border-b mb-8">
+                        <button class="tab-button py-2 px-6 font-semibold text-gray-600 active" data-tab="land">🌱 遊休地の循環</button>
+                        <button class="tab-button py-2 px-6 font-semibold text-gray-600" data-tab="knowledge">💡 経験知の循環</button>
+                        <button class="tab-button py-2 px-6 font-semibold text-gray-600" data-tab="value">🤝 共創価値の循環</button>
+                    </div>
+                    <div id="land" class="tab-content">
+                        <h3 class="text-2xl font-bold text-emerald-700 mb-6 text-center">遊休地の新しい循環：空間の再創造</h3>
+                        <div class="grid md:grid-cols-3 gap-6 text-center">
+                            <div class="bg-emerald-50 p-6 rounded-lg">
+                                <h4 class="font-bold text-lg mb-2">校舎のアップサイクル</h4>
+                                <p class="text-sm text-gray-600">古い机や椅子を花台や家具に。校舎の記憶を活かし、温かみのある空間へ。</p>
+                            </div>
+                            <div class="bg-emerald-50 p-6 rounded-lg">
+                                <h4 class="font-bold text-lg mb-2">多目的温室</h4>
+                                <p class="text-sm text-gray-600">体育館や校庭が、花と緑を育む温室に。地域の気候に適した栽培を実現します。</p>
+                            </div>
+                            <div class="bg-emerald-50 p-6 rounded-lg">
+                                <h4 class="font-bold text-lg mb-2">コンポスト・ガーデン</h4>
+                                <p class="text-sm text-gray-600">パーク内の植物残渣を堆肥化。資源を無駄にしない、クローズドな循環を生み出します。</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="knowledge" class="tab-content hidden">
+                        <h3 class="text-2xl font-bold text-emerald-700 mb-6 text-center">経験知の新しい循環：学びと創造の場</h3>
+                        <p class="text-center text-gray-600 mb-6">地域の熟練者を講師に招き、彼らの持つ知識や技術を次世代に繋ぐワークショップを開催します。</p>
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div class="bg-emerald-50 p-6 rounded-lg">
+                                <h4 class="font-bold text-lg mb-2">クリエイト工房</h4>
+                                <p class="text-sm text-gray-600">図工室や家庭科室が、花の加工品（ドライフラワー、キャンドル等）を作る工房に変身。来場者は創造の喜びを体験できます。</p>
+                            </div>
+                            <div class="bg-emerald-50 p-6 rounded-lg">
+                                <h4 class="font-bold text-lg mb-2">世代間交流</h4>
+                                <p class="text-sm text-gray-600">ワークショップを通じて、地域の高齢者から若者へ、貴重な知識やスキルが継承される場を創出します。</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="value" class="tab-content hidden">
+                        <h3 class="text-2xl font-bold text-emerald-700 mb-6 text-center">共創価値の新しい循環：地域経済の活性化</h3>
+                        <p class="text-center text-gray-600 mb-6">パークを拠点に、新しい価値と経済の循環を生み出し、地域全体を豊かにします。</p>
+                         <div class="grid md:grid-cols-2 gap-6">
+                            <div class="bg-emerald-50 p-6 rounded-lg">
+                                <h4 class="font-bold text-lg mb-2">パーク・マーケット</h4>
+                                <p class="text-sm text-gray-600">工房で作られた高付加価値な加工品を販売。生産者の廃棄ロス削減と収益向上を支援します。</p>
+                            </div>
+                            <div class="bg-emerald-50 p-6 rounded-lg">
+                                <h4 class="font-bold text-lg mb-2">新しい市場の創出</h4>
+                                <p class="text-sm text-gray-600">花の新しい消費習慣を提案し、加工技術を持つ人材を育成。花産業の未来を拓きます。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="partnership" class="py-20 bg-emerald-50 section-fade-in">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold text-emerald-800">構想を支える連携体制</h2>
+                    <p class="mt-4 text-emerald-700 max-w-2xl mx-auto">この構想は、国、地域行政、そして民間の強固なパートナーシップによって実現します。「一人ではできなくとも」、三者が一体となることで大きな力を生み出します。</p>
+                </div>
+                <div class="max-w-2xl mx-auto flex flex-col items-center">
+                    <div class="w-full flex justify-center mb-4">
+                        <div class="bg-white shadow-md rounded-lg p-6 text-center w-2/3">
+                            <h3 class="font-bold text-emerald-700">国</h3>
+                            <p class="text-sm text-gray-600">仲介プラットフォームの提供<br>(公的クラウドファンディング等)</p>
+                        </div>
+                    </div>
+                    <div class="w-full flex justify-between items-start -mt-4">
+                         <div class="bg-white shadow-md rounded-lg p-6 text-center w-[48%]">
+                            <h3 class="font-bold text-emerald-700">地域行政</h3>
+                            <p class="text-sm text-gray-600">遊休地の提供・補助金<br>地域課題の提示</p>
+                        </div>
+                         <div class="bg-white shadow-md rounded-lg p-6 text-center w-[48%]">
+                            <h3 class="font-bold text-emerald-700">民間</h3>
+                            <p class="text-sm text-gray-600">企画・実行<br>(企業, NPO, 個人)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="impact" class="py-20 bg-white section-fade-in">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold text-gray-800">期待されるインパクト</h2>
+                    <p class="mt-4 text-gray-600 max-w-2xl mx-auto">この構想は、地域社会と花産業の両方に、測定可能でポジティブな変化をもたらします。</p>
+                </div>
+                <div class="grid md:grid-cols-2 gap-12">
+                    <div>
+                        <h3 class="text-xl font-bold text-center mb-4">地域社会への活力創出</h3>
+                        <div class="chart-container">
+                            <canvas id="communityImpactChart"></canvas>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-center mb-4">花産業の持続可能な未来へ</h3>
+                        <div class="chart-container">
+                            <canvas id="flowerIndustryImpactChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-emerald-800 text-white py-8">
+        <div class="container mx-auto px-6 text-center">
+            <h3 class="text-2xl font-bold mb-2">希望が続く限り、未来は継続する。</h3>
+            <p>この「新しい循環」は、社会のスタンダードを創り上げる継続的な営みとなるでしょう。</p>
+            <p class="mt-4 text-sm text-emerald-200">&copy; 2025 フラワー・エコパーク構想チーム</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const flowerWasteData = {
+                labels: ['廃棄ロス率', '生産量'],
+                datasets: [{
+                    label: '現状',
+                    data: [30, 70],
+                    backgroundColor: ['#FCA5A5', '#A7F3D0'],
+                    borderColor: ['#F87171', '#6EE7B7'],
+                    borderWidth: 1
+                }]
+            };
+
+            const communityImpactData = {
+                labels: ['地域住民の交流頻度', '関係人口', '新規雇用'],
+                datasets: [
+                    {
+                        label: '現状 (Before)',
+                        data: [3, 2, 1],
+                        backgroundColor: '#D1D5DB',
+                    },
+                    {
+                        label: '10年後 (After)',
+                        data: [8, 7, 6],
+                        backgroundColor: '#34D399',
+                    }
+                ]
+            };
+            
+            const flowerIndustryImpactData = {
+                labels: ['廃棄ロス率削減', '担い手増加', '新市場創出額(億円)'],
+                datasets: [
+                    {
+                        label: '現状 (Before)',
+                        data: [0, 2, 1],
+                        backgroundColor: '#D1D5DB',
+                    },
+                    {
+                        label: '10年後 (After)',
+                        data: [7, 6, 8],
+                        backgroundColor: '#34D399',
+                    }
+                ]
+            };
+
+            const createChart = (ctx, type, data, options) => {
+                if (ctx) new Chart(ctx, { type, data, options });
+            };
+
+            const commonOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed !== null) {
+                                    if(context.chart.config.type === 'pie' || context.chart.config.type === 'doughnut'){
+                                       label += context.parsed + '%';
+                                    } else {
+                                       label += context.parsed;
+                                    }
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                if (String(value).length > 16) {
+                                    return value.substring(0, 16) + '...';
+                                }
+                                return value;
+                            }
+                        }
+                    },
+                    x: {
+                         ticks: {
+                            callback: function(value, index, values) {
+                                const label = this.getLabelForValue(value);
+                                if (label.length > 16) {
+                                    return label.substring(0, 16) + '...';
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            };
+            
+            const pieOptions = {
+                 responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                     tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed !== null) {
+                                    label += context.parsed + '%';
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+
+            createChart(document.getElementById('flowerWasteChart'), 'doughnut', flowerWasteData, pieOptions);
+            createChart(document.getElementById('communityImpactChart'), 'bar', communityImpactData, commonOptions);
+            createChart(document.getElementById('flowerIndustryImpactChart'), 'bar', flowerIndustryImpactData, commonOptions);
+
+            const tabs = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    const target = tab.getAttribute('data-tab');
+                    tabContents.forEach(content => {
+                        if (content.id === target) {
+                            content.classList.remove('hidden');
+                        } else {
+                            content.classList.add('hidden');
+                        }
+                    });
+                });
+            });
+
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+            
+            const navLinks = document.querySelectorAll('nav a');
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    if(link.hash !== "") {
+                        e.preventDefault();
+                        const targetElement = document.querySelector(link.hash);
+                        if(targetElement) {
+                            const headerOffset = document.getElementById('header').offsetHeight;
+                            const elementPosition = targetElement.getBoundingClientRect().top;
+                            const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                      
+                            window.scrollTo({
+                                top: offsetPosition,
+                                behavior: "smooth"
+                            });
+                        }
+                    }
+                    if(window.innerWidth < 768) {
+                       mobileMenu.classList.add('hidden');
+                    }
+                });
+            });
+
+            const sections = document.querySelectorAll('.section-fade-in');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            sections.forEach(section => {
+                observer.observe(section);
+            });
+            
+            const mainNavLinks = document.querySelectorAll('.hidden.md\\:flex a.nav-link');
+            const sectionObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        mainNavLinks.forEach(link => {
+                            link.classList.toggle('active', link.getAttribute('href').substring(1) === entry.target.id);
+                        });
+                    }
+                });
+            }, { rootMargin: "-50% 0px -50% 0px" });
+
+            document.querySelectorAll('main section').forEach(section => {
+                sectionObserver.observe(section);
+            });
+        });
+    </script>
+</body>
+</html>
