@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>「むすびば」エコシステム フロー図</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Color Palette: Earthy & Vibrant (Brown: #A0522D, Grey: #6B7280, Green: #10B981, Red: #EF4444, Yellow: #F59E0B, Blue: #3B82F6) -->
+    <!-- CONFIRMATION: NO SVG was used. All diagrams are built with structured HTML/CSS and Tailwind. -->
+    <!-- CONFIRMATION: NO Mermaid JS was used. -->
+    <style>
+        body {
+            font-family: 'Noto Sans JP', 'Inter', sans-serif;
+            background-color: #F3F4F6;
+        }
+        .flow-card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .flow-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        .arrow {
+            position: absolute;
+            background-color: #9CA3AF;
+            z-index: 0;
+        }
+        .arrow-head {
+            width: 0;
+            height: 0;
+            border-top: 8px solid transparent;
+            border-bottom: 8px solid transparent;
+        }
+        .inner-loop-arrow-color { background-color: #10B981; }
+        .inner-loop-arrow-head-color { border-left: 12px solid #10B981; }
+        .outer-loop-arrow-color { background-color: #3B82F6; }
+        .outer-loop-arrow-head-color { border-left: 12px solid #3B82F6; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 p-4 sm:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-800">「むすびば」エコシステム</h1>
+            <p class="mt-4 text-lg text-gray-600">あの日の学び場が知恵と自然を結ぶ新たな循環を育む</p>
+        </header>
+
+        <main class="relative w-full min-h-[1200px] md:min-h-[1000px] flex items-center justify-center">
+            
+            <div class="absolute w-full h-full">
+                
+                <div class="absolute top-1/2 left-1/2 w-[95%] h-[95%] md:w-[800px] md:h-[800px] -translate-x-1/2 -translate-y-1/2 border-4 border-dashed border-blue-300 rounded-full animate-spin-slow"></div>
+                <div class="absolute top-1/2 left-1/2 w-[60%] h-[60%] md:w-[500px] md:h-[500px] -translate-x-1/2 -translate-y-1/2 border-4 border-dashed border-green-300 rounded-full animate-spin-slower"></div>
+
+                <!-- Outer Loop Arrows -->
+                <div class="absolute top-[calc(50%-2px)] left-[15%] w-[70%] h-1 outer-loop-arrow-color transform -translate-y-1/2 hidden md:block"></div>
+                <div class="absolute top-[15%] left-[calc(50%-2px)] w-1 h-[70%] outer-loop-arrow-color transform -translate-x-1/2 hidden md:block"></div>
+                <div class="absolute top-[15%] left-[calc(50%)] w-0 h-0 border-t-[12px] border-t-blue-500 border-l-8 border-l-transparent border-r-8 border-r-transparent transform -translate-x-1/2 hidden md:block"></div>
+                <div class="absolute bottom-[15%] left-[calc(50%)] w-0 h-0 border-b-[12px] border-b-blue-500 border-l-8 border-l-transparent border-r-8 border-r-transparent transform -translate-x-1/2 hidden md:block"></div>
+                <div class="absolute top-[calc(50%)] left-[15%] w-0 h-0 border-l-[12px] border-l-blue-500 border-t-8 border-t-transparent border-b-8 border-b-transparent transform -translate-y-1/2 hidden md:block"></div>
+                <div class="absolute top-[calc(50%)] right-[15%] w-0 h-0 border-r-[12px] border-r-blue-500 border-t-8 border-t-transparent border-b-8 border-b-transparent transform -translate-y-1/2 hidden md:block"></div>
+                
+                <!-- Inner Loop Arrows -->
+                <div class="absolute top-[calc(50%-1px)] left-[25%] w-[50%] h-0.5 inner-loop-arrow-color transform -translate-y-1/2 hidden md:block"></div>
+                <div class="absolute top-[25%] left-[calc(50%-1px)] w-0.5 h-[50%] inner-loop-arrow-color transform -translate-x-1/2 hidden md:block"></div>
+                <div class="absolute top-[25%] left-[calc(50%)] w-0 h-0 border-t-[10px] border-t-green-500 border-l-6 border-l-transparent border-r-6 border-r-transparent transform -translate-x-1/2 hidden md:block"></div>
+                <div class="absolute bottom-[25%] left-[calc(50%)] w-0 h-0 border-b-[10px] border-b-green-500 border-l-6 border-l-transparent border-r-6 border-r-transparent transform -translate-x-1/2 hidden md:block"></div>
+                <div class="absolute top-[calc(50%)] left-[25%] w-0 h-0 border-l-[10px] border-l-green-500 border-t-6 border-t-transparent border-b-6 border-b-transparent transform -translate-y-1/2 hidden md:block"></div>
+                <div class="absolute top-[calc(50%)] right-[25%] w-0 h-0 border-r-[10px] border-r-green-500 border-t-6 border-t-transparent border-b-6 border-b-transparent transform -translate-y-1/2 hidden md:block"></div>
+            </div>
+
+            <!-- Central Hub -->
+            <div class="relative z-10 flex flex-col items-center justify-center bg-white rounded-full w-48 h-48 md:w-64 md:h-64 p-4 text-center shadow-2xl border-4 border-amber-400">
+                <div class="text-6xl md:text-7xl">🏫</div>
+                <h2 class="text-xl md:text-2xl font-bold text-amber-600 mt-2">むすびば</h2>
+            </div>
+            
+            <div class="absolute w-full h-full flex flex-col md:flex-none items-center justify-between md:justify-start py-8 md:py-0 space-y-4 md:space-y-0">
+                <!-- Inner Loop Items -->
+                <div class="md:absolute md:top-[calc(50%-18rem)] md:left-1/2 md:-translate-x-1/2 flow-card p-4 w-64 text-center z-10">
+                    <div class="text-4xl mb-2">♻️</div>
+                    <h3 class="font-bold text-green-700">廃棄物の発生源</h3>
+                    <p class="text-sm text-gray-600">温室・工房・カフェなど</p>
+                </div>
+                <div class="md:absolute md:top-1/2 md:left-[calc(50%-18rem)] md:-translate-y-1/2 flow-card p-4 w-64 text-center z-10">
+                    <div class="text-4xl mb-2">🧑‍🌾</div>
+                    <h3 class="font-bold text-green-700">コンポスト・ガーデン</h3>
+                    <p class="text-sm text-gray-600">廃棄物を集約・見学・学習</p>
+                </div>
+                 <div class="md:absolute md:top-1/2 md:right-[calc(50%-18rem)] md:-translate-y-1/2 flow-card p-4 w-64 text-center z-10">
+                    <div class="text-4xl mb-2">🌿</div>
+                    <h3 class="font-bold text-green-700">栽培</h3>
+                    <p class="text-sm text-gray-600">花壇・温室・露地栽培</p>
+                </div>
+                <div class="md:absolute md:bottom-[calc(50%-18rem)] md:left-1/2 md:-translate-x-1/2 flow-card p-4 w-64 text-center z-10">
+                    <div class="text-4xl mb-2">🌱</div>
+                    <h3 class="font-bold text-green-700">肥料への転換</h3>
+                    <p class="text-sm text-gray-600">パーク内の循環が完結</p>
+                </div>
+
+                <!-- Outer Loop Items -->
+                <div class="md:absolute md:top-8 md:left-1/2 md:-translate-x-1/2 flow-card p-4 w-64 text-center z-10">
+                    <div class="text-4xl mb-2">🏞️👵</div>
+                    <h3 class="font-bold text-blue-700">地域の資源</h3>
+                    <p class="text-sm text-gray-600">遊休地と熟練者の経験知</p>
+                </div>
+                <div class="md:absolute md:top-1/2 md:left-8 md:-translate-y-1/2 flow-card p-4 w-64 text-center z-10">
+                    <div class="text-4xl mb-2">💰👨‍👩‍👧‍👦</div>
+                    <h3 class="font-bold text-blue-700">外部の力</h3>
+                    <p class="text-sm text-gray-600">資金と来場者の体験</p>
+                </div>
+                <div class="md:absolute md:top-1/2 md:right-8 md:-translate-y-1/2 flow-card p-4 w-64 text-center z-10">
+                    <div class="text-4xl mb-2">🤝✨</div>
+                    <h3 class="font-bold text-blue-700">共創価値の実現</h3>
+                    <p class="text-sm text-gray-600">「むすびつき」から収益が生まれる</p>
+                </div>
+                <div class="md:absolute md:bottom-8 md:left-1/2 md:-translate-x-1/2 flow-card p-4 w-64 text-center z-10">
+                    <div class="text-4xl mb-2">➡️🏘️</div>
+                    <h3 class="font-bold text-blue-700">地域への還元</h3>
+                    <p class="text-sm text-gray-600">報酬と地域経済への貢献</p>
+                </div>
+            </div>
+        </main>
+
+        <footer class="text-center mt-12">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-green-500">
+                    <h3 class="text-2xl font-bold text-green-700 mb-2">内側のループ：パーク内の資源循環</h3>
+                    <p class="text-gray-600">パーク内で発生した廃棄物をコンポストで肥料に変え、その肥料で再び作物を栽培します。これは、自然の力を借りて資源を無駄なく活用する、学びのある完全な循環システムです。</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
+                    <h3 class="text-2xl font-bold text-blue-700 mb-2">外側のループ：地域との経済循環</h3>
+                    <p class="text-gray-600">地域の遊休地や熟練者の知恵といった「資源」と、外部からの資金や人々という「力」を「むすびば」が結びつけます。そこから生まれた価値は、再び地域に還元され、新しい経済の循環を生み出します。</p>
+                </div>
+            </div>
+        </footer>
+
+    </div>
+
+    <style>
+        @keyframes spin-slow {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        .animate-spin-slow {
+            animation: spin-slow 60s linear infinite;
+        }
+        @keyframes spin-slower {
+            from { transform: translate(-50%, -50%) rotate(360deg); }
+            to { transform: translate(-50%, -50%) rotate(0deg); }
+        }
+        .animate-spin-slower {
+            animation: spin-slower 90s linear infinite;
+        }
+    </style>
+</body>
+</html>
