@@ -121,11 +121,24 @@
         let carCounter = 0;
         let lastFrameData = null;
         // 動き検出のしきい値。値を大きくすると、より大きな動きでのみ検出されます。
-        let motionThreshold = 4000;
+        let motionThreshold = 2000;
         // 車と見なす最小動きエリア。値を大きくすると、より大きなオブジェクトでのみ検出されます。
-        let minCarMovementArea = 1000;
-        let carDetectionCooldown = 1000; // ミリ秒単位のクールダウン期間
+        let minCarMovementArea = 500;
+        let carDetectionCooldown = 1500; // ミリ秒単位のクールダウン期間。車の連続カウントを防ぎます。
         let lastCarDetectionTime = 0;
+
+        // 右側から進入を検知するX座標のしきい値（例：画面幅の70%より右）
+        let rightEntranceThresholdX = 0;
+        // 左側へ退出を検知するX座標のしきい値（例：画面幅の30%より左）
+        let leftExitThresholdX = 0;
+        // 車の移動方向を判断するためのX座標の最小変化量
+        let horizontalMovementThreshold = 10;
+
+        // 現在通過中の車の状態を保持するオブジェクト
+        let carState = {
+            enteredRight: false, // 車が右側から進入したか
+            lastX: null          // 最後に検出された車のX座標の中心
+        };
 
         // メッセージボックスを表示する関数
         function showMessage(message, type = 'warning') {
@@ -153,6 +166,10 @@
                     video.play();
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
+                    // しきい値をビデオの幅に基づいて設定
+                    rightEntranceThresholdX = canvas.width * 0.7;
+                    leftExitThresholdX = canvas.width * 0.3;
+
                     animate(); // アニメーションループを開始
                     startButton.disabled = true;
                     stopButton.disabled = false;
@@ -178,6 +195,8 @@
             startButton.disabled = false;
             stopButton.disabled = true;
             hideMessageBox();
+            // カメラ停止時に車の状態もリセット
+            carState = { enteredRight: false, lastX: null };
         }
 
         // カウントをリセットする関数
@@ -185,6 +204,8 @@
             carCounter = 0;
             carCountDisplay.textContent = carCounter;
             lastFrameData = null; // リセット時に過去のフレームデータもクリア
+            carState = { enteredRight: false, lastX: null }; // 車の状態もリセット
+            lastCarDetectionTime = 0; // 検出時間もリセット
             showMessage("カウントがリセットされました。", 'warning');
             setTimeout(hideMessageBox, 2000); // 2秒後にメッセージを非表示
         }
@@ -224,16 +245,49 @@
                 const currentTime = Date.now();
 
                 // 動きのあるピクセル数が一定以上で、かつクールダウン期間が終了している場合
-                if (motionPixels > motionThreshold && (currentTime - lastCarDetectionTime > carDetectionCooldown)) {
-                    const motionArea = (maxX - minX) * (maxY - minY);
-                    // 動きのあるエリアが車のサイズと見なせる最小値より大きい場合
-                    if (motionArea > minCarMovementArea) {
-                        carCounter++;
-                        carCountDisplay.textContent = carCounter;
-                        lastCarDetectionTime = currentTime; // 最後の検出時間を更新
-                        showMessage("車が検出されました！", 'warning');
-                        setTimeout(hideMessageBox, 2000); // 2秒後にメッセージを非表示
+                if (motionPixels > motionThreshold && (maxX - minX) * (maxY - minY) > minCarMovementArea) {
+                    const currentCentroidX = (minX + maxX) / 2;
+
+                    // クールダウン期間中の場合は、新しい車の検出をスキップ
+                    if (currentTime - lastCarDetectionTime < carDetectionCooldown) {
+                        carState = { enteredRight: false, lastX: null }; // クールダウン中は状態をリセット
+                        lastFrameData = new Uint8ClampedArray(currentFrameData);
+                        return;
                     }
+
+                    // 車が右側から進入していない場合
+                    if (!carState.enteredRight) {
+                        // 動きの中心が右側の進入しきい値より右にある場合
+                        if (currentCentroidX > rightEntranceThresholdX && minX > rightEntranceThresholdX * 0.9) { // minXも考慮して、しっかり右から
+                            carState.enteredRight = true;
+                            carState.lastX = currentCentroidX;
+                        }
+                    }
+                    // 車が右側から進入している状態の場合
+                    else {
+                        // 左に移動しているかチェック
+                        if (currentCentroidX < carState.lastX - horizontalMovementThreshold) {
+                            carState.lastX = currentCentroidX; // 新しい位置を記録
+
+                            // 動きの中心が左側の退出ゾーンに入った場合
+                            if (currentCentroidX < leftExitThresholdX) {
+                                carCounter++;
+                                carCountDisplay.textContent = carCounter;
+                                lastCarDetectionTime = currentTime; // 最後の検出時間を更新（クールダウン開始）
+                                showMessage("右から左に車が横切りました！", 'warning');
+                                setTimeout(hideMessageBox, 2000); // 2秒後にメッセージを非表示
+                                carState = { enteredRight: false, lastX: null }; // 検出完了、状態をリセット
+                            }
+                        }
+                        // 右に移動したか、ほぼ停止した場合
+                        else if (currentCentroidX > carState.lastX + horizontalMovementThreshold) {
+                            carState = { enteredRight: false, lastX: null }; // 状態をリセット
+                        }
+                        // 移動がほとんどない場合は、状態を維持（lastXは更新しない）
+                    }
+                } else if (carState.enteredRight && currentTime - lastCarDetectionTime > carDetectionCooldown) {
+                    // 長時間動きが検出されない場合も状態をリセット
+                    carState = { enteredRight: false, lastX: null };
                 }
             }
             lastFrameData = new Uint8ClampedArray(currentFrameData); // 現在のフレームデータを保存
@@ -242,7 +296,8 @@
         // イベントリスナー
         startButton.addEventListener('click', startCamera);
         stopButton.addEventListener('click', stopCamera);
-        resetButton.addEventListener('click', resetCount); // リセットボタンのイベントリスナーを追加
+        resetButton.addEventListener('click', resetCount);
     </script>
 </body>
 </html>
+
