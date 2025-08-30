@@ -120,8 +120,10 @@
         let animationFrameId = null;
         let carCounter = 0;
         let lastFrameData = null;
-        let motionThreshold = 2000; // 動き検出のしきい値
-        let minCarMovementArea = 500; // 車と見なす最小動きエリア
+        // 動き検出のしきい値。値を大きくすると、より大きな動きでのみ検出されます。
+        let motionThreshold = 8000;
+        // 車と見なす最小動きエリア。値を大きくすると、より大きなオブジェクトでのみ検出されます。
+        let minCarMovementArea = 2000;
         let carDetectionCooldown = 1000; // ミリ秒単位のクールダウン期間
         let lastCarDetectionTime = 0;
 
@@ -184,6 +186,7 @@
             carCountDisplay.textContent = carCounter;
             lastFrameData = null; // リセット時に過去のフレームデータもクリア
             showMessage("カウントがリセットされました。", 'warning');
+            setTimeout(hideMessageBox, 2000); // 2秒後にメッセージを非表示
         }
 
         // モーション検出のアニメーションループ
@@ -239,7 +242,7 @@
         // イベントリスナー
         startButton.addEventListener('click', startCamera);
         stopButton.addEventListener('click', stopCamera);
+        resetButton.addEventListener('click', resetCount); // リセットボタンのイベントリスナーを追加
     </script>
 </body>
 </html>
-
