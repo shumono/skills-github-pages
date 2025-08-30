@@ -121,9 +121,9 @@
         let carCounter = 0;
         let lastFrameData = null;
         // 動き検出のしきい値。値を大きくすると、より大きな動きでのみ検出されます。
-        let motionThreshold = 8000;
+        let motionThreshold = 4000;
         // 車と見なす最小動きエリア。値を大きくすると、より大きなオブジェクトでのみ検出されます。
-        let minCarMovementArea = 2000;
+        let minCarMovementArea = 1000;
         let carDetectionCooldown = 1000; // ミリ秒単位のクールダウン期間
         let lastCarDetectionTime = 0;
 
