@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>車カウントアプリ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: "Inter", sans-serif;
+            background-color: #f0f4f8;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            color: #334155;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            max-width: 90%;
+            width: 500px;
+            text-align: center;
+        }
+        video, canvas {
+            width: 100%;
+            height: auto;
+            border-radius: 0.75rem;
+            margin-top: 1.5rem;
+            background-color: #e2e8f0;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        .btn-primary {
+            background-color: #3b82f6;
+            color: #ffffff;
+        }
+        .btn-primary:hover {
+            background-color: #2563eb;
+        }
+        .btn-danger {
+            background-color: #ef4444;
+            color: #ffffff;
+        }
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+        .count-display {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #1e3a8a;
+            margin-top: 1.5rem;
+        }
+        .message-box {
+            background-color: #fefcbf;
+            border: 1px solid #fcd34d;
+            color: #92400e;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+            display: none; /* デフォルトで非表示 */
+        }
+        @media (min-width: 640px) {
+            .controls {
+                flex-direction: row;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-3xl font-bold text-gray-800">車カウンタ</h1>
+        <p class="text-gray-600 mt-2">カメラを使って、横切る車の台数をカウントします。</p>
+
+        <video id="video" autoplay muted playsinline class="mt-4 rounded-lg shadow-md"></video>
+        <canvas id="canvas" class="hidden mt-4 rounded-lg shadow-md"></canvas>
+
+        <div class="count-display" id="carCount">0</div>
+
+        <div class="controls">
+            <button id="startButton" class="btn-primary">カメラを開始</button>
+            <button id="stopButton" class="btn-danger" disabled>カメラを停止</button>
+            <button id="resetButton" class="btn-primary">カウントをリセット</button>
+        </div>
+
+        <div id="messageBox" class="message-box"></div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d', { willReadFrequently: true });
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const resetButton = document.getElementById('resetButton');
+        const carCountDisplay = document.getElementById('carCount');
+        const messageBox = document.getElementById('messageBox');
+
+        let stream = null;
+        let animationFrameId = null;
+        let carCounter = 0;
+        let lastFrameData = null;
+        let motionThreshold = 2000; // 動き検出のしきい値
+        let minCarMovementArea = 500; // 車と見なす最小動きエリア
+        let carDetectionCooldown = 1000; // ミリ秒単位のクールダウン期間
+        let lastCarDetectionTime = 0;
+
+        // メッセージボックスを表示する関数
+        function showMessage(message, type = 'warning') {
+            messageBox.textContent = message;
+            messageBox.className = `message-box ${type === 'error' ? 'bg-red-100 border-red-400 text-red-700' : 'bg-yellow-100 border-yellow-400 text-yellow-700'}`;
+            messageBox.style.display = 'block';
+        }
+
+        // メッセージボックスを非表示にする関数
+        function hideMessageBox() {
+            messageBox.style.display = 'none';
+        }
+
+        // カメラを開始する関数
+        async function startCamera() {
+            try {
+                // ユーザーのデバイスの背面カメラを優先的に選択
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: { exact: 'environment' } // 背面カメラを優先
+                    }
+                });
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                    video.play();
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    animate(); // アニメーションループを開始
+                    startButton.disabled = true;
+                    stopButton.disabled = false;
+                    hideMessageBox();
+                };
+            } catch (err) {
+                console.error("カメラへのアクセスに失敗しました:", err);
+                showMessage("カメラへのアクセスに失敗しました。カメラが許可されているか確認してください。", 'error');
+            }
+        }
+
+        // カメラを停止する関数
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+                video.srcObject = null;
+            }
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+            startButton.disabled = false;
+            stopButton.disabled = true;
+            hideMessageBox();
+        }
+
+        // カウントをリセットする関数
+        function resetCount() {
+            carCounter = 0;
+            carCountDisplay.textContent = carCounter;
+            lastFrameData = null; // リセット時に過去のフレームデータもクリア
+            showMessage("カウントがリセットされました。", 'warning');
+        }
+
+        // モーション検出のアニメーションループ
+        function animate() {
+            animationFrameId = requestAnimationFrame(animate);
+
+            if (video.paused || video.ended) {
+                return;
+            }
+
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const currentFrameData = context.getImageData(0, 0, canvas.width, canvas.height).data;
+
+            if (lastFrameData) {
+                let motionPixels = 0;
+                let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
+
+                for (let i = 0; i < currentFrameData.length; i += 4) {
+                    const rDiff = Math.abs(currentFrameData[i] - lastFrameData[i]);
+                    const gDiff = Math.abs(currentFrameData[i + 1] - lastFrameData[i + 1]);
+                    const bDiff = Math.abs(currentFrameData[i + 2] - lastFrameData[i + 2]);
+                    const avgDiff = (rDiff + gDiff + bDiff) / 3;
+
+                    if (avgDiff > motionThreshold / 100) { // ピクセルごとの動きのしきい値
+                        motionPixels++;
+                        const x = (i / 4) % canvas.width;
+                        const y = Math.floor((i / 4) / canvas.width);
+                        minX = Math.min(minX, x);
+                        minY = Math.min(minY, y);
+                        maxX = Math.max(maxX, x);
+                        maxY = Math.max(maxY, y);
+                    }
+                }
+
+                const currentTime = Date.now();
+
+                // 動きのあるピクセル数が一定以上で、かつクールダウン期間が終了している場合
+                if (motionPixels > motionThreshold && (currentTime - lastCarDetectionTime > carDetectionCooldown)) {
+                    const motionArea = (maxX - minX) * (maxY - minY);
+                    // 動きのあるエリアが車のサイズと見なせる最小値より大きい場合
+                    if (motionArea > minCarMovementArea) {
+                        carCounter++;
+                        carCountDisplay.textContent = carCounter;
+                        lastCarDetectionTime = currentTime; // 最後の検出時間を更新
+                        showMessage("車が検出されました！", 'warning');
+                        setTimeout(hideMessageBox, 2000); // 2秒後にメッセージを非表示
+                    }
+                }
+            }
+            lastFrameData = new Uint8ClampedArray(currentFrameData); // 現在のフレームデータを保存
+        }
+
+        // イベントリスナー
+        startButton.addEventListener('click', startCamera);
+        stopButton.addEventListener('click', stopCamera);
+    </script>
+</body>
+</html>
+
